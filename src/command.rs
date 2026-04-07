@@ -3,6 +3,65 @@ use std::process::Command;
 
 use crate::manifest::Manifest;
 
+pub enum Compiler {
+    CC,
+    CPP,
+}
+
+impl Compiler {
+    pub fn command(&self) -> &str {
+        match self {
+            Compiler::CC => "cc",
+            Compiler::CPP => "cpp",
+        }
+    }
+}
+
+pub struct Commander {
+    compiler: Compiler,
+    flags: Vec<String>,
+    std: String,
+    out: String,
+}
+
+impl Commander {
+    pub fn new(manifest: Manifest) -> Result<Self, String> {
+        let compiler = match manifest.project.lang.as_str() {
+            "c" => Compiler::CC,
+            "c++" => Compiler::CPP,
+            _ => return Err(format!("Invalid language: {}", manifest.project.lang)),
+        };
+
+        Ok(Self {
+            compiler,
+            flags: manifest.build.flags,
+            std: manifest.project.std,
+            out: manifest.project.name,
+        })
+    }
+
+    pub fn compile(&self, src: &String) -> Result<Command, String> {
+        let mut cmd = Command::new(self.compiler.command());
+        cmd.arg("-c");
+        cmd.arg(src);
+        cmd.arg("-o");
+        cmd.arg(format!("build/{}", src));
+        cmd.args(&self.flags);
+        cmd.arg(format!("-std={}", self.std));
+
+        Ok(cmd)
+    }
+
+    pub fn link(&self, objs: &Vec<String>) -> Result<Command, String> {
+        let mut cmd = Command::new(self.compiler.command());
+        cmd.args(objs);
+        cmd.arg("-o");
+        cmd.arg(format!("build/{}", self.out));
+
+        Ok(cmd)
+    }
+}
+
 fn is_glob(pattern: &String) -> bool {
     let meta_chars = ['*', '?', '[', ']', '{', '}', '!'];
     let mut chars = pattern.chars();

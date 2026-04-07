@@ -23,24 +23,24 @@ pub struct Manifest {
 }
 
 impl Manifest {
-    pub fn new() -> Option<Self> {
+    pub fn new() -> Result<Self, String> {
         let working_dir = Path::new(".");
         let manifest_file = working_dir.join("build.toml");
 
         if !manifest_file.exists() {
-            return None;
+            return Err("No build.toml manifest file in directory.".to_string());
         }
 
         let content = match fs::read_to_string(manifest_file) {
             Ok(content) => content,
             Err(_) => {
-                return None;
+                return Err("Failed to read manifest file.".to_string());
             }
         };
 
         match toml::from_str(&content.as_str()) {
-            Ok(manifest) => manifest,
-            Err(_) => None,
+            Ok(manifest) => Ok(manifest),
+            Err(_) => Err("Failed to parse manifest file.".to_string()),
         }
     }
 }

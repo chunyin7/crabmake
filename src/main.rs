@@ -1,4 +1,4 @@
-use crate::manifest::Manifest;
+use crate::{command::Commander, manifest::Manifest};
 use clap::Parser;
 
 mod command;
@@ -26,8 +26,19 @@ enum Commands {
 }
 
 fn main() {
-    let Some(manifest) = Manifest::new() else {
-        eprintln!("No build.toml manifest file.");
-        std::process::exit(1);
+    let manifest = match Manifest::new() {
+        Ok(val) => val,
+        Err(msg) => {
+            eprintln!("{msg}");
+            std::process::exit(1);
+        }
+    };
+
+    let commander = match Commander::new(manifest) {
+        Ok(val) => val,
+        Err(msg) => {
+            eprintln!("{msg}");
+            std::process::exit(1);
+        }
     };
 }

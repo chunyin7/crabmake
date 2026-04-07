@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, process::Command};
 
 use crate::manifest::Manifest;
 
@@ -8,10 +8,10 @@ pub enum Compiler {
 }
 
 impl Compiler {
-    pub fn command(&self) -> &str {
+    pub fn command(&self) -> Command {
         match self {
-            Compiler::CC => "cc",
-            Compiler::CPP => "cpp",
+            Compiler::CC => Command::new("cc"),
+            Compiler::CPP => Command::new("cpp"),
         }
     }
 

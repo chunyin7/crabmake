@@ -11,7 +11,7 @@ pub fn clean(ctx: &Context) -> Result<(), String> {
 }
 
 pub fn create_compile(ctx: &Context, src: &PathBuf) -> Result<Command, String> {
-    let mut cmd = Command::new(ctx.compiler.command());
+    let mut cmd = ctx.compiler.command();
     cmd.arg("-c");
     cmd.arg(src);
     cmd.arg("-o");
@@ -23,7 +23,7 @@ pub fn create_compile(ctx: &Context, src: &PathBuf) -> Result<Command, String> {
 }
 
 pub fn create_link(ctx: &Context, objs: &Vec<String>) -> Result<Command, String> {
-    let mut cmd = Command::new(ctx.compiler.command());
+    let mut cmd = ctx.compiler.command();
     cmd.args(objs);
     cmd.arg("-o");
     cmd.arg(ctx.build_dir.join(&ctx.manifest.project.name));

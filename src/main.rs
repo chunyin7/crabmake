@@ -1,6 +1,7 @@
 use crate::manifest::Manifest;
 use clap::Parser;
 
+mod command;
 mod manifest;
 
 #[derive(Parser)]

@@ -2,24 +2,24 @@ use serde::Deserialize;
 use std::{fs, path::Path};
 
 #[derive(Deserialize)]
-struct ProjectInfo {
-    name: String,
-    lang: String,
-    std: String,
-    version: String,
+pub struct ProjectInfo {
+    pub name: String,
+    pub lang: String,
+    pub std: String,
+    pub version: String,
 }
 
 #[derive(Deserialize)]
-struct BuildInfo {
-    srcs: Vec<String>,
-    include_dirs: Vec<String>,
-    flags: Vec<String>,
+pub struct BuildInfo {
+    pub srcs: Vec<String>,
+    pub include_dirs: Vec<String>,
+    pub flags: Vec<String>,
 }
 
 #[derive(Deserialize)]
 pub struct Manifest {
-    project: ProjectInfo,
-    build: BuildInfo,
+    pub project: ProjectInfo,
+    pub build: BuildInfo,
 }
 
 impl Manifest {

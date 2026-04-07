@@ -1,8 +1,10 @@
-use crate::{command::Commander, manifest::Manifest};
+use crate::context::Context;
 use clap::Parser;
 
-mod command;
+mod commands;
+mod context;
 mod manifest;
+mod util;
 
 #[derive(Parser)]
 enum Commands {
@@ -26,15 +28,7 @@ enum Commands {
 }
 
 fn main() {
-    let manifest = match Manifest::new() {
-        Ok(val) => val,
-        Err(msg) => {
-            eprintln!("{msg}");
-            std::process::exit(1);
-        }
-    };
-
-    let commander = match Commander::new(manifest) {
+    let ctx = match Context::new() {
         Ok(val) => val,
         Err(msg) => {
             eprintln!("{msg}");

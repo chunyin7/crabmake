@@ -1,5 +1,8 @@
 use serde::Deserialize;
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Deserialize)]
 pub struct ProjectInfo {
@@ -23,9 +26,8 @@ pub struct Manifest {
 }
 
 impl Manifest {
-    pub fn new() -> Result<Self, String> {
-        let working_dir = Path::new(".");
-        let manifest_file = working_dir.join("build.toml");
+    pub fn new(proj_root: &PathBuf) -> Result<Self, String> {
+        let manifest_file = proj_root.join("build.toml");
 
         if !manifest_file.exists() {
             return Err("No build.toml manifest file in directory.".to_string());

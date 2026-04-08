@@ -1,8 +1,8 @@
-use crate::context::Context;
+use crate::config::Config;
 use clap::Parser;
 
 mod commands;
-mod context;
+mod config;
 mod file;
 mod manifest;
 mod util;
@@ -29,7 +29,7 @@ enum Commands {
 }
 
 fn main() {
-    let ctx = match Context::new() {
+    let ctx = match Config::new() {
         Ok(val) => val,
         Err(msg) => {
             eprintln!("{msg}");

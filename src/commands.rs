@@ -1,15 +1,14 @@
+use anyhow::{Context, Result, bail};
 use std::{fs, path::PathBuf, process::Command};
 
-use crate::context::Context;
+use crate::config::Config;
 
-pub fn clean(ctx: &Context) -> Result<(), String> {
-    match fs::remove_dir_all(ctx.build_dir.as_path()) {
-        Ok(_) => Ok(()),
-        Err(_) => Err("Failed to remove build directory.".to_string()),
-    }
+pub fn clean(ctx: &Config) -> Result<()> {
+    fs::remove_dir_all(ctx.build_dir.as_path()).context("Failed to remove build directory.")?;
+    Ok(())
 }
 
-pub fn create_compile(ctx: &Context, src: &PathBuf) -> Result<Command, String> {
+pub fn create_compile(ctx: &Config, src: &PathBuf) -> Result<Command> {
     let mut cmd = ctx.compiler.command();
     cmd.arg("-c");
     cmd.arg(src);
@@ -21,23 +20,19 @@ pub fn create_compile(ctx: &Context, src: &PathBuf) -> Result<Command, String> {
     Ok(cmd)
 }
 
-pub fn create_link(ctx: &Context, objs: &Vec<String>) -> Result<Command, String> {
+pub fn create_link(ctx: &Config, objs: &Vec<String>) -> Command {
     let mut cmd = ctx.compiler.command();
     cmd.args(objs);
     cmd.arg("-o");
     cmd.arg(ctx.build_dir.join(&ctx.manifest.project.name));
 
-    Ok(cmd)
+    cmd
 }
 
-pub fn execute_cmd(mut cmd: Command) -> Result<(), String> {
-    let status = match cmd.status() {
-        Ok(val) => val,
-        Err(_) => return Err("Failed to launch compiler.".to_string()),
-    };
-
+pub fn execute_cmd(mut cmd: Command) -> Result<()> {
+    let status = cmd.status().context("Failed to launch compiler.")?;
     if !status.success() {
-        return Err("Compilation failed".to_string());
+        bail!("Compilation failed");
     }
 
     Ok(())

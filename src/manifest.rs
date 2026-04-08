@@ -1,3 +1,4 @@
+use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::{
     fs,
@@ -26,23 +27,16 @@ pub struct Manifest {
 }
 
 impl Manifest {
-    pub fn new(proj_root: &PathBuf) -> Result<Self, String> {
+    pub fn new(proj_root: &PathBuf) -> Result<Self> {
         let manifest_file = proj_root.join("build.toml");
 
         if !manifest_file.exists() {
-            return Err("No build.toml manifest file in directory.".to_string());
+            bail!("No build.toml manifest file in directory.")
         }
 
-        let content = match fs::read_to_string(manifest_file) {
-            Ok(content) => content,
-            Err(_) => {
-                return Err("Failed to read manifest file.".to_string());
-            }
-        };
-
-        match toml::from_str(&content.as_str()) {
-            Ok(manifest) => Ok(manifest),
-            Err(_) => Err("Failed to parse manifest file.".to_string()),
-        }
+        let content = fs::read_to_string(manifest_file).context("Failed to read manifest file.")?;
+        let manifest =
+            toml::from_str(&content.as_str()).context("Failed to parse manifest file.")?;
+        Ok(manifest)
     }
 }

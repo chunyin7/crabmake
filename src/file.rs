@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::context::Context;
+use crate::config::Config;
 use glob::glob;
 
 fn is_glob(pattern: &String) -> bool {
@@ -21,7 +21,7 @@ fn is_glob(pattern: &String) -> bool {
     false
 }
 
-pub fn convert_srcs(ctx: &Context) -> Vec<PathBuf> {
+pub fn convert_srcs(ctx: &Config) -> Vec<PathBuf> {
     ctx.manifest
         .build
         .srcs

@@ -3,6 +3,7 @@ use clap::Parser;
 
 mod commands;
 mod context;
+mod file;
 mod manifest;
 mod util;
 

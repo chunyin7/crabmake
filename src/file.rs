@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use std::path::PathBuf;
 
 use crate::config::Config;
@@ -21,23 +22,19 @@ fn is_glob(pattern: &String) -> bool {
     false
 }
 
-pub fn convert_srcs(ctx: &Config) -> Vec<PathBuf> {
-    ctx.manifest
-        .build
-        .srcs
-        .iter()
-        .flat_map(|s| {
-            if is_glob(s) {
-                glob(s)
-                    .unwrap()
-                    .filter_map(|r| match r {
-                        Ok(path) => Some(ctx.proj_root.join(path)),
-                        Err(_) => None,
-                    })
-                    .collect::<Vec<_>>()
-            } else {
-                vec![ctx.proj_root.join(s)]
+pub fn convert_srcs(ctx: &Config) -> Result<Vec<PathBuf>> {
+    let mut paths: Vec<PathBuf> = Vec::new();
+    for s in &ctx.manifest.build.srcs {
+        if is_glob(&s) {
+            let entries = glob(&s).context(format!("Failed to unwrap glob pattern: {s}"))?;
+            for entry in entries {
+                let path = entry.context(format!("Unreadable path for glob result: {s}"))?;
+                paths.push(path);
             }
-        })
-        .collect::<Vec<_>>()
+        } else {
+            paths.push(ctx.proj_root.join(s));
+        }
+    }
+
+    Ok(paths)
 }

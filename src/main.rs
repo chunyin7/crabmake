@@ -36,4 +36,13 @@ fn main() {
             std::process::exit(1);
         }
     };
+
+    let commands = Commands::parse();
+
+    match commands {
+        Commands::Init { name } => { /* todo */ }
+        Commands::Build {} => { /* todo */ }
+        Commands::Clean {} => { /* todo */ }
+        Commands::Run {} => { /* todo */ }
+    }
 }

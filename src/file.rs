@@ -29,7 +29,7 @@ pub fn convert_srcs(ctx: &Config) -> Result<Vec<PathBuf>> {
             let entries = glob(&s).context(format!("Failed to unwrap glob pattern: {s}"))?;
             for entry in entries {
                 let path = entry.context(format!("Unreadable path for glob result: {s}"))?;
-                paths.push(path);
+                paths.push(ctx.proj_root.join(path));
             }
         } else {
             paths.push(ctx.proj_root.join(s));

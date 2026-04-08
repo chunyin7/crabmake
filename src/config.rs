@@ -1,29 +1,24 @@
-use anyhow::{Context, Error, Result, bail};
-use std::{path::PathBuf, process::Command};
+use anyhow::{Context, Result, bail};
+use std::path::PathBuf;
+use which::which;
 
 use crate::manifest::Manifest;
 
-pub enum Compiler {
-    CC,
-    CPP,
+pub struct Compiler {
+    pub path: PathBuf,
 }
 
 impl Compiler {
-    pub fn command(&self) -> Command {
-        match self {
-            Compiler::CC => Command::new("cc"),
-            Compiler::CPP => Command::new("cpp"),
-        }
-    }
-
     pub fn from_lang(lang: &str) -> Result<Self> {
-        match lang {
-            "c" => Ok(Self::CC),
-            "c++" => Ok(Self::CPP),
+        let name = match lang {
+            "c" => "cc",
+            "c++" => "c++",
             _ => {
                 bail!("Invalid language: {lang}")
             }
-        }
+        };
+        let path = which(name).context(format!("Compiler {name} not found."))?;
+        Ok(Self { path })
     }
 }
 

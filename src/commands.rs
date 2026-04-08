@@ -17,17 +17,41 @@ pub fn compile(ctx: &Config) -> Result<PathBuf> {
         .into_iter()
         .unzip();
     cmds.iter_mut()
-        .map(|mut cmd| execute_cmd(&mut cmd))
+        .zip(srcs.iter())
+        .enumerate()
+        .map(|(i, (cmd, src))| {
+            println!(
+                "Compiling {} ({}/{})",
+                src.to_string_lossy(),
+                i + 1,
+                srcs.len()
+            );
+            execute_cmd(cmd)
+        })
         .collect::<Result<Vec<_>>>()?;
 
     let (mut cmd, bin) = create_link(ctx, &objs);
+    println!("Linking");
     execute_cmd(&mut cmd)?;
 
     Ok(bin)
 }
 
+pub fn run(bin: &PathBuf) -> Result<()> {
+    let status = Command::new(bin).status().context(format!(
+        "Failed to execute binary: {}",
+        bin.to_string_lossy()
+    ))?;
+
+    if !status.success() {
+        bail!("Failed to execute binary: {}", bin.to_string_lossy())
+    }
+
+    Ok(())
+}
+
 fn create_compile(ctx: &Config, src: &PathBuf) -> Result<(Command, PathBuf)> {
-    let mut cmd = ctx.compiler.command();
+    let mut cmd = Command::new(&ctx.compiler.path);
     cmd.arg("-c");
     cmd.arg(src);
     cmd.arg("-o");
@@ -40,7 +64,7 @@ fn create_compile(ctx: &Config, src: &PathBuf) -> Result<(Command, PathBuf)> {
 }
 
 fn create_link(ctx: &Config, objs: &Vec<PathBuf>) -> (Command, PathBuf) {
-    let mut cmd = ctx.compiler.command();
+    let mut cmd = Command::new(&ctx.compiler.path);
     cmd.args(objs);
     cmd.arg("-o");
     let bin = ctx.build_dir.join(&ctx.manifest.project.name);

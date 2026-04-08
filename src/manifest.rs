@@ -2,7 +2,7 @@ use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 #[derive(Deserialize)]

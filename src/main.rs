@@ -1,4 +1,8 @@
-use crate::config::Config;
+use crate::{
+    commands::{clean, compile, run},
+    config::Config,
+};
+use anyhow::Result;
 use clap::Parser;
 
 mod commands;
@@ -28,6 +32,16 @@ enum Commands {
     Run {},
 }
 
+fn handle<T>(result: Result<T>) -> T {
+    match result {
+        Ok(val) => val,
+        Err(e) => {
+            eprintln!("{e:#}");
+            std::process::exit(1);
+        }
+    }
+}
+
 fn main() {
     let ctx = match Config::new() {
         Ok(val) => val,
@@ -41,8 +55,13 @@ fn main() {
 
     match commands {
         Commands::Init { name } => { /* todo */ }
-        Commands::Build {} => { /* todo */ }
-        Commands::Clean {} => { /* todo */ }
-        Commands::Run {} => { /* todo */ }
+        Commands::Build {} => {
+            handle(compile(&ctx));
+        }
+        Commands::Clean {} => handle(clean(&ctx)),
+        Commands::Run {} => {
+            let bin = handle(compile(&ctx));
+            handle(run(&bin))
+        }
     }
 }

@@ -1,7 +1,6 @@
-use glob::glob;
 use std::{fs, path::PathBuf, process::Command};
 
-use crate::{context::Context, manifest::Manifest};
+use crate::context::Context;
 
 pub fn clean(ctx: &Context) -> Result<(), String> {
     match fs::remove_dir_all(ctx.build_dir.as_path()) {
@@ -29,4 +28,17 @@ pub fn create_link(ctx: &Context, objs: &Vec<String>) -> Result<Command, String>
     cmd.arg(ctx.build_dir.join(&ctx.manifest.project.name));
 
     Ok(cmd)
+}
+
+pub fn execute_cmd(mut cmd: Command) -> Result<(), String> {
+    let status = match cmd.status() {
+        Ok(val) => val,
+        Err(_) => return Err("Failed to launch compiler.".to_string()),
+    };
+
+    if !status.success() {
+        return Err("Compilation failed".to_string());
+    }
+
+    Ok(())
 }

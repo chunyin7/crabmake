@@ -42,14 +42,7 @@ fn handle<T>(result: Result<T>) -> T {
 }
 
 fn main() {
-    let ctx = match Config::new() {
-        Ok(val) => val,
-        Err(msg) => {
-            eprintln!("{msg}");
-            std::process::exit(1);
-        }
-    };
-
+    let ctx = handle(Config::new());
     let commands = Commands::parse();
 
     match commands {

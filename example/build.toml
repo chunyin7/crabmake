@@ -1,0 +1,10 @@
+[project]
+name = "example"
+lang = "c"
+std = "c99"
+version = "0.1.0"
+
+[build]
+srcs = ["src/**/*.c"]
+include_dirs = ["src"]
+flags = ["-Wall", "-Wextra"]

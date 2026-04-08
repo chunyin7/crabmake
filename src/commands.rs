@@ -55,10 +55,22 @@ fn create_compile(ctx: &Config, src: &PathBuf) -> Result<(Command, PathBuf)> {
     cmd.arg("-c");
     cmd.arg(src);
     cmd.arg("-o");
+
     let obj = ctx.map_src_to_output(src)?;
+    if let Some(parent) = obj.parent() {
+        fs::create_dir_all(parent).context(format!(
+            "Failed to create output directory: {}",
+            parent.to_string_lossy()
+        ))?;
+    }
+
     cmd.arg(&obj);
     cmd.args(ctx.manifest.build.flags.iter());
     cmd.arg(format!("-std={}", ctx.manifest.project.std));
+    ctx.manifest.build.include_dirs.iter().for_each(|dir| {
+        cmd.arg("-I");
+        cmd.arg(ctx.proj_root.join(dir));
+    });
 
     Ok((cmd, obj))
 }

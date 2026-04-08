@@ -9,7 +9,6 @@ mod commands;
 mod config;
 mod file;
 mod manifest;
-mod util;
 
 #[derive(Parser)]
 enum Commands {

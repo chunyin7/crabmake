@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use std::path::PathBuf;
+use std::{path::PathBuf, process::Command};
 use which::which;
 
 use crate::manifest::Manifest;
@@ -44,11 +44,24 @@ impl Config {
         })
     }
 
-    pub fn map_src_to_output(&self, src: &PathBuf) -> Result<PathBuf> {
-        let relative = src.strip_prefix(&self.proj_root).context(format!(
-            "Failed to map source file {} to output file.",
-            src.to_string_lossy()
-        ))?;
+    fn map_src_to_output(&self, src: &PathBuf) -> Result<PathBuf> {
+        let relative = src
+            .strip_prefix(&self.proj_root)
+            .context(format!(
+                "Failed to map source file {} to output file.",
+                src.to_string_lossy()
+            ))?
+            .to_owned();
+        Ok(relative)
+    }
+
+    pub fn map_src_to_obj(&self, src: &PathBuf) -> Result<PathBuf> {
+        let relative = self.map_src_to_output(src)?;
         Ok(self.build_dir.join(relative).with_extension("o"))
+    }
+
+    pub fn map_src_to_dep(&self, src: &PathBuf) -> Result<PathBuf> {
+        let relative = self.map_src_to_output(src)?;
+        Ok(self.build_dir.join(relative).with_extension("d"))
     }
 }

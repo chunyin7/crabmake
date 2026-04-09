@@ -1,7 +1,10 @@
 use anyhow::{Context, Result, bail};
 use std::{fs, path::PathBuf, process::Command};
 
-use crate::{config::Config, file::convert_srcs};
+use crate::{
+    config::Config,
+    file::{convert_srcs, is_stale},
+};
 
 pub fn clean(ctx: &Config) -> Result<()> {
     fs::remove_dir_all(ctx.build_dir.as_path()).context("Failed to remove build directory.")?;
@@ -10,21 +13,33 @@ pub fn clean(ctx: &Config) -> Result<()> {
 
 pub fn compile(ctx: &Config) -> Result<PathBuf> {
     let srcs = convert_srcs(ctx)?;
-    let (mut cmds, objs): (Vec<_>, Vec<_>) = srcs
+    let stale = srcs
+        .iter()
+        .filter(|src| {
+            let obj = match ctx.map_src_to_obj(src) {
+                Ok(val) => val,
+                Err(_) => {
+                    return true;
+                }
+            };
+            is_stale(&src, &obj).unwrap_or(true)
+        })
+        .collect::<Vec<_>>();
+    let (mut cmds, objs): (Vec<_>, Vec<_>) = stale
         .iter()
         .map(|src| create_compile(ctx, src))
         .collect::<Result<Vec<_>>>()?
         .into_iter()
         .unzip();
     cmds.iter_mut()
-        .zip(srcs.iter())
+        .zip(stale.iter())
         .enumerate()
         .map(|(i, (cmd, src))| {
             println!(
                 "Compiling {} ({}/{})",
                 src.to_string_lossy(),
                 i + 1,
-                srcs.len()
+                stale.len()
             );
             execute_cmd(cmd)
         })
@@ -56,7 +71,7 @@ fn create_compile(ctx: &Config, src: &PathBuf) -> Result<(Command, PathBuf)> {
     cmd.arg(src);
     cmd.arg("-o");
 
-    let obj = ctx.map_src_to_output(src)?;
+    let obj = ctx.map_src_to_obj(src)?;
     if let Some(parent) = obj.parent() {
         fs::create_dir_all(parent).context(format!(
             "Failed to create output directory: {}",
@@ -71,6 +86,9 @@ fn create_compile(ctx: &Config, src: &PathBuf) -> Result<(Command, PathBuf)> {
         cmd.arg("-I");
         cmd.arg(ctx.proj_root.join(dir));
     });
+    cmd.arg("-MMD");
+    cmd.arg("-MF");
+    cmd.arg(ctx.map_src_to_dep(src)?);
 
     Ok((cmd, obj))
 }

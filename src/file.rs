@@ -1,5 +1,8 @@
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::config::Config;
 use glob::glob;
@@ -37,4 +40,15 @@ pub fn convert_srcs(ctx: &Config) -> Result<Vec<PathBuf>> {
     }
 
     Ok(paths)
+}
+
+pub fn is_stale(src: &Path, obj: &Path) -> Result<bool> {
+    match fs::metadata(obj) {
+        Ok(meta) => {
+            let src_modified = fs::metadata(src)?.modified()?;
+            let obj_modified = meta.modified()?;
+            Ok(src_modified > obj_modified)
+        }
+        Err(_) => Ok(true),
+    }
 }

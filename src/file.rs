@@ -52,3 +52,36 @@ pub fn is_stale(src: &Path, obj: &Path) -> Result<bool> {
         Err(_) => Ok(true),
     }
 }
+
+pub fn parse_dep_file(ctx: &Config, src: &PathBuf) -> Result<Vec<PathBuf>> {
+    let dep = ctx.map_src_to_dep(src)?;
+    let raw = fs::read_to_string(dep)?;
+    // replace all continuations
+    let joined = raw.replace("\\\n", " ");
+    let deps_str = joined
+        .splitn(2, ": ")
+        .nth(1)
+        .context("Malformed depfile.")?
+        .trim();
+
+    let mut deps: Vec<PathBuf> = Vec::new();
+    let mut cur = String::new();
+    let mut deps_chars = deps_str.chars();
+    while let Some(c) = deps_chars.next() {
+        match c {
+            '\\' => {
+                if let Some(next) = deps_chars.next() {
+                    cur.push(next);
+                }
+            }
+            ' ' => {
+                deps.push(ctx.proj_root.join(&cur));
+                cur.clear();
+            }
+            _ => cur.push(c),
+        }
+    }
+    deps.push(ctx.proj_root.join(cur));
+
+    Ok(deps)
+}

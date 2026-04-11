@@ -27,6 +27,7 @@ pub struct Config {
     pub build_dir: PathBuf,
     pub compiler: Compiler,
     pub manifest: Manifest,
+    pub bin: PathBuf,
 }
 
 impl Config {
@@ -35,12 +36,14 @@ impl Config {
         let manifest = Manifest::new(&proj_root)?;
         let compiler = Compiler::from_lang(manifest.project.lang.as_str())?;
         let build_dir = proj_root.join("build");
+        let bin = build_dir.join(&manifest.project.name);
 
         Ok(Self {
             proj_root,
             build_dir,
             manifest,
             compiler,
+            bin,
         })
     }
 

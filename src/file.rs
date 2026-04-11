@@ -53,8 +53,7 @@ pub fn is_stale(src: &Path, obj: &Path) -> Result<bool> {
     }
 }
 
-pub fn parse_dep_file(ctx: &Config, src: &PathBuf) -> Result<Vec<PathBuf>> {
-    let dep = ctx.map_src_to_dep(src)?;
+pub fn parse_dep_file(ctx: &Config, dep: &PathBuf) -> Result<Vec<PathBuf>> {
     let raw = fs::read_to_string(dep)?;
     // replace all continuations
     let joined = raw.replace("\\\n", " ");

@@ -52,8 +52,8 @@ fn main() {
         }
         Commands::Clean {} => handle(clean(&ctx)),
         Commands::Run {} => {
-            let bin = handle(compile(&ctx));
-            handle(run(&bin))
+            handle(compile(&ctx));
+            handle(run(&ctx.bin))
         }
     }
 }

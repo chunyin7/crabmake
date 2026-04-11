@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf, process::Command};
 
 use crate::{
     config::Config,
-    file::{convert_srcs, is_stale},
+    file::{convert_srcs, is_stale, parse_dep_file},
 };
 
 pub fn clean(ctx: &Config) -> Result<()> {
@@ -11,45 +11,54 @@ pub fn clean(ctx: &Config) -> Result<()> {
     Ok(())
 }
 
-pub fn compile(ctx: &Config) -> Result<PathBuf> {
+pub fn compile(ctx: &Config) -> Result<()> {
     let srcs = convert_srcs(ctx)?;
-    let stale = srcs
+    let units: Vec<(PathBuf, PathBuf, PathBuf)> = srcs
+        .into_iter()
+        .map(|src| -> Result<_> {
+            let obj = ctx.map_src_to_obj(&src)?;
+            let dep = ctx.map_src_to_dep(&src)?;
+            Ok((src, obj, dep))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let stale = units
         .iter()
-        .filter(|src| {
-            let obj = match ctx.map_src_to_obj(src) {
+        .filter(|(_, obj, dep)| {
+            let deps = match parse_dep_file(ctx, dep) {
                 Ok(val) => val,
-                Err(_) => {
-                    return true;
-                }
+                Err(_) => return true,
             };
-            is_stale(&src, &obj).unwrap_or(true)
+            deps.iter().any(|dep| is_stale(&dep, &obj).unwrap_or(true))
         })
         .collect::<Vec<_>>();
-    let (mut cmds, objs): (Vec<_>, Vec<_>) = stale
+    stale
         .iter()
-        .map(|src| create_compile(ctx, src))
-        .collect::<Result<Vec<_>>>()?
-        .into_iter()
-        .unzip();
-    cmds.iter_mut()
-        .zip(stale.iter())
         .enumerate()
-        .map(|(i, (cmd, src))| {
+        .map(|(i, (src, obj, dep))| -> Result<_> {
+            let mut cmd = create_compile(ctx, src, obj, dep)?;
             println!(
                 "Compiling {} ({}/{})",
                 src.to_string_lossy(),
                 i + 1,
                 stale.len()
             );
-            execute_cmd(cmd)
+            execute_cmd(&mut cmd)
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let (mut cmd, bin) = create_link(ctx, &objs);
-    println!("Linking");
-    execute_cmd(&mut cmd)?;
+    let objs: Vec<&PathBuf> = units.iter().map(|(_, obj, _)| obj).collect::<Vec<_>>();
+    if !stale.is_empty()
+        || !ctx.bin.exists()
+        || objs
+            .iter()
+            .any(|obj| is_stale(obj, &ctx.bin).unwrap_or(true))
+    {
+        let mut cmd = create_link(ctx, &objs);
+        println!("Linking");
+        execute_cmd(&mut cmd)?;
+    }
 
-    Ok(bin)
+    Ok(())
 }
 
 pub fn run(bin: &PathBuf) -> Result<()> {
@@ -65,13 +74,12 @@ pub fn run(bin: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn create_compile(ctx: &Config, src: &PathBuf) -> Result<(Command, PathBuf)> {
+fn create_compile(ctx: &Config, src: &PathBuf, obj: &PathBuf, dep: &PathBuf) -> Result<(Command)> {
     let mut cmd = Command::new(&ctx.compiler.path);
     cmd.arg("-c");
     cmd.arg(src);
     cmd.arg("-o");
 
-    let obj = ctx.map_src_to_obj(src)?;
     if let Some(parent) = obj.parent() {
         fs::create_dir_all(parent).context(format!(
             "Failed to create output directory: {}",
@@ -88,19 +96,18 @@ fn create_compile(ctx: &Config, src: &PathBuf) -> Result<(Command, PathBuf)> {
     });
     cmd.arg("-MMD");
     cmd.arg("-MF");
-    cmd.arg(ctx.map_src_to_dep(src)?);
+    cmd.arg(dep);
 
-    Ok((cmd, obj))
+    Ok(cmd)
 }
 
-fn create_link(ctx: &Config, objs: &Vec<PathBuf>) -> (Command, PathBuf) {
+fn create_link(ctx: &Config, objs: &Vec<&PathBuf>) -> Command {
     let mut cmd = Command::new(&ctx.compiler.path);
     cmd.args(objs);
     cmd.arg("-o");
-    let bin = ctx.build_dir.join(&ctx.manifest.project.name);
-    cmd.arg(&bin);
+    cmd.arg(&ctx.bin);
 
-    (cmd, bin)
+    cmd
 }
 
 fn execute_cmd(cmd: &mut Command) -> Result<()> {

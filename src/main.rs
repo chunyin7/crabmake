@@ -21,14 +21,20 @@ enum Commands {
 
     /// compile and link
     #[command()]
-    Build {},
+    Build {
+        #[arg(long)]
+        release: bool,
+    },
 
     /// clean build artifacts
     #[command()]
     Clean {},
 
     #[command()]
-    Run {},
+    Run {
+        #[arg(long)]
+        release: bool,
+    },
 }
 
 fn handle<T>(result: Result<T>) -> T {
@@ -47,12 +53,12 @@ fn main() {
 
     match commands {
         Commands::Init { name } => { /* todo */ }
-        Commands::Build {} => {
-            handle(compile(&ctx));
+        Commands::Build { release } => {
+            handle(compile(&ctx, release));
         }
         Commands::Clean {} => handle(clean(&ctx)),
-        Commands::Run {} => {
-            handle(compile(&ctx));
+        Commands::Run { release } => {
+            handle(compile(&ctx, release));
             handle(run(&ctx.bin))
         }
     }

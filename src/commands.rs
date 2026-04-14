@@ -12,7 +12,7 @@ pub fn clean(ctx: &Config) -> Result<()> {
     Ok(())
 }
 
-pub fn compile(ctx: &Config) -> Result<()> {
+pub fn compile(ctx: &Config, release: bool) -> Result<()> {
     let srcs = convert_srcs(ctx)?;
     let units: Vec<(PathBuf, PathBuf, PathBuf)> = srcs
         .into_iter()
@@ -38,7 +38,7 @@ pub fn compile(ctx: &Config) -> Result<()> {
     stale
         .par_iter()
         .map(|(src, obj, dep)| -> Result<_> {
-            let mut cmd = create_compile(ctx, src, obj, dep)?;
+            let mut cmd = create_compile(ctx, src, obj, dep, release)?;
             {
                 let mut out = stdout.lock().unwrap();
                 out.write_all(b"Compiling: ")?;
@@ -80,7 +80,13 @@ pub fn run(bin: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn create_compile(ctx: &Config, src: &PathBuf, obj: &PathBuf, dep: &PathBuf) -> Result<(Command)> {
+fn create_compile(
+    ctx: &Config,
+    src: &PathBuf,
+    obj: &PathBuf,
+    dep: &PathBuf,
+    release: bool,
+) -> Result<(Command)> {
     let mut cmd = Command::new(&ctx.compiler.path);
     cmd.arg("-c");
     cmd.arg(src);
@@ -103,6 +109,13 @@ fn create_compile(ctx: &Config, src: &PathBuf, obj: &PathBuf, dep: &PathBuf) -> 
     cmd.arg("-MMD");
     cmd.arg("-MF");
     cmd.arg(dep);
+
+    if release {
+        cmd.arg("-O2");
+    } else {
+        cmd.arg("-O0");
+        cmd.arg("-g");
+    }
 
     Ok(cmd)
 }

@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, bail};
-use std::{fs, path::PathBuf, process::Command};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use std::{fs, io::Write, os::unix::ffi::OsStrExt, path::PathBuf, process::Command, sync::Mutex};
 
 use crate::{
     config::Config,
@@ -31,18 +32,23 @@ pub fn compile(ctx: &Config) -> Result<()> {
             deps.iter().any(|dep| is_stale(&dep, &obj).unwrap_or(true))
         })
         .collect::<Vec<_>>();
+
+    let stderr = Mutex::new(std::io::stderr());
+    let stdout = Mutex::new(std::io::stdout());
     stale
-        .iter()
-        .enumerate()
-        .map(|(i, (src, obj, dep))| -> Result<_> {
+        .par_iter()
+        .map(|(src, obj, dep)| -> Result<_> {
             let mut cmd = create_compile(ctx, src, obj, dep)?;
-            println!(
-                "Compiling {} ({}/{})",
-                src.to_string_lossy(),
-                i + 1,
-                stale.len()
-            );
-            execute_cmd(&mut cmd)
+            {
+                let mut out = stdout.lock().unwrap();
+                out.write_all(b"Compiling: ")?;
+                out.write_all(src.as_os_str().as_bytes())?;
+            }
+            let output = execute_cmd(&mut cmd)?;
+            let mut err = stderr.lock().unwrap();
+            err.write_all(&output)?;
+
+            Ok(())
         })
         .collect::<Result<Vec<_>>>()?;
 
@@ -110,11 +116,11 @@ fn create_link(ctx: &Config, objs: &Vec<&PathBuf>) -> Command {
     cmd
 }
 
-fn execute_cmd(cmd: &mut Command) -> Result<()> {
-    let status = cmd.status().context("Failed to launch compiler.")?;
-    if !status.success() {
+fn execute_cmd(cmd: &mut Command) -> Result<Vec<u8>> {
+    let output = cmd.output().context("Failed to launch compiler.")?;
+    if !output.status.success() {
         bail!("Compilation failed");
     }
 
-    Ok(())
+    Ok(output.stderr)
 }

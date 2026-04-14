@@ -16,9 +16,11 @@ A minimal C/C++ Cargo inspired build tool written in Rust
 ## Usage
 
 ```
-crabmake build    # compile and link
-crabmake run      # compile, link, and run
-crabmake clean    # remove build artifacts
+crabmake build              # debug build (no optimisation, includes debug symbols)
+crabmake build --release    # release build (-O2)
+crabmake run                # build and run (debug)
+crabmake run --release      # build and run (release)
+crabmake clean              # remove build artifacts
 ```
 
 ## Manifest

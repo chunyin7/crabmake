@@ -17,8 +17,8 @@ pub fn compile(ctx: &Config, release: bool) -> Result<()> {
     let units: Vec<(PathBuf, PathBuf, PathBuf)> = srcs
         .into_iter()
         .map(|src| -> Result<_> {
-            let obj = ctx.map_src_to_obj(&src)?;
-            let dep = ctx.map_src_to_dep(&src)?;
+            let obj = ctx.map_src_to_obj(&src, release)?;
+            let dep = ctx.map_src_to_dep(&src, release)?;
             Ok((src, obj, dep))
         })
         .collect::<Result<Vec<_>>>()?;

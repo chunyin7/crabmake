@@ -47,7 +47,7 @@ impl Config {
         })
     }
 
-    fn map_src_to_output(&self, src: &PathBuf) -> Result<PathBuf> {
+    fn src_to_relative(&self, src: &PathBuf) -> Result<PathBuf> {
         let relative = src
             .strip_prefix(&self.proj_root)
             .context(format!(
@@ -58,13 +58,21 @@ impl Config {
         Ok(relative)
     }
 
-    pub fn map_src_to_obj(&self, src: &PathBuf) -> Result<PathBuf> {
-        let relative = self.map_src_to_output(src)?;
-        Ok(self.build_dir.join(relative).with_extension("o"))
+    fn output_dir(&self, release: bool) -> PathBuf {
+        if release {
+            self.build_dir.join("release")
+        } else {
+            self.build_dir.join("debug")
+        }
     }
 
-    pub fn map_src_to_dep(&self, src: &PathBuf) -> Result<PathBuf> {
-        let relative = self.map_src_to_output(src)?;
-        Ok(self.build_dir.join(relative).with_extension("d"))
+    pub fn map_src_to_obj(&self, src: &PathBuf, release: bool) -> Result<PathBuf> {
+        let relative = self.src_to_relative(src)?;
+        Ok(self.output_dir(release).join(relative).with_extension("o"))
+    }
+
+    pub fn map_src_to_dep(&self, src: &PathBuf, release: bool) -> Result<PathBuf> {
+        let relative = self.src_to_relative(src)?;
+        Ok(self.output_dir(release).join(relative).with_extension("d"))
     }
 }

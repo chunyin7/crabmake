@@ -25,25 +25,34 @@ impl Compiler {
 pub struct Config {
     pub proj_root: PathBuf,
     pub build_dir: PathBuf,
+    pub output_dir: PathBuf,
     pub compiler: Compiler,
     pub manifest: Manifest,
     pub bin: PathBuf,
+    pub release: bool,
 }
 
 impl Config {
-    pub fn new() -> Result<Self> {
+    pub fn new(release: bool) -> Result<Self> {
         let proj_root = std::env::current_dir().context("Failed to read working directory.")?;
         let manifest = Manifest::new(&proj_root)?;
         let compiler = Compiler::from_lang(manifest.project.lang.as_str())?;
         let build_dir = proj_root.join("build");
-        let bin = build_dir.join(&manifest.project.name);
+        let output_dir = if release {
+            build_dir.join("release")
+        } else {
+            build_dir.join("debug")
+        };
+        let bin = output_dir.join(&manifest.project.name);
 
         Ok(Self {
             proj_root,
             build_dir,
+            output_dir,
             manifest,
             compiler,
             bin,
+            release,
         })
     }
 
@@ -58,21 +67,13 @@ impl Config {
         Ok(relative)
     }
 
-    fn output_dir(&self, release: bool) -> PathBuf {
-        if release {
-            self.build_dir.join("release")
-        } else {
-            self.build_dir.join("debug")
-        }
+    pub fn map_src_to_obj(&self, src: &PathBuf) -> Result<PathBuf> {
+        let relative = self.src_to_relative(src)?;
+        Ok(self.output_dir.join(relative).with_extension("o"))
     }
 
-    pub fn map_src_to_obj(&self, src: &PathBuf, release: bool) -> Result<PathBuf> {
+    pub fn map_src_to_dep(&self, src: &PathBuf) -> Result<PathBuf> {
         let relative = self.src_to_relative(src)?;
-        Ok(self.output_dir(release).join(relative).with_extension("o"))
-    }
-
-    pub fn map_src_to_dep(&self, src: &PathBuf, release: bool) -> Result<PathBuf> {
-        let relative = self.src_to_relative(src)?;
-        Ok(self.output_dir(release).join(relative).with_extension("d"))
+        Ok(self.output_dir.join(relative).with_extension("d"))
     }
 }

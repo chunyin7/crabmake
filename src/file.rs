@@ -74,13 +74,17 @@ pub fn parse_dep_file(ctx: &Config, dep: &PathBuf) -> Result<Vec<PathBuf>> {
                 }
             }
             ' ' => {
-                deps.push(ctx.proj_root.join(&cur));
-                cur.clear();
+                if !cur.is_empty() {
+                    deps.push(ctx.proj_root.join(&cur));
+                    cur.clear();
+                }
             }
             _ => cur.push(c),
         }
     }
-    deps.push(ctx.proj_root.join(cur));
+    if !cur.is_empty() {
+        deps.push(ctx.proj_root.join(cur));
+    }
 
     Ok(deps)
 }

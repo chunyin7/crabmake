@@ -8,17 +8,20 @@ use crate::{
 };
 
 pub fn clean(ctx: &Config) -> Result<()> {
-    fs::remove_dir_all(ctx.build_dir.as_path()).context("Failed to remove build directory.")?;
-    Ok(())
+    match fs::remove_dir_all(ctx.build_dir.as_path()) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e).context("Failed to remove build directory."),
+    }
 }
 
-pub fn compile(ctx: &Config, release: bool) -> Result<()> {
+pub fn compile(ctx: &Config) -> Result<()> {
     let srcs = convert_srcs(ctx)?;
     let units: Vec<(PathBuf, PathBuf, PathBuf)> = srcs
         .into_iter()
         .map(|src| -> Result<_> {
-            let obj = ctx.map_src_to_obj(&src, release)?;
-            let dep = ctx.map_src_to_dep(&src, release)?;
+            let obj = ctx.map_src_to_obj(&src)?;
+            let dep = ctx.map_src_to_dep(&src)?;
             Ok((src, obj, dep))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -38,11 +41,12 @@ pub fn compile(ctx: &Config, release: bool) -> Result<()> {
     stale
         .par_iter()
         .map(|(src, obj, dep)| -> Result<_> {
-            let mut cmd = create_compile(ctx, src, obj, dep, release)?;
+            let mut cmd = create_compile(ctx, src, obj, dep)?;
             {
                 let mut out = stdout.lock().unwrap();
                 out.write_all(b"Compiling: ")?;
                 out.write_all(src.as_os_str().as_bytes())?;
+                out.write_all(b"\n")?;
             }
             let output = execute_cmd(&mut cmd)?;
             let mut err = stderr.lock().unwrap();
@@ -61,7 +65,9 @@ pub fn compile(ctx: &Config, release: bool) -> Result<()> {
     {
         let mut cmd = create_link(ctx, &objs);
         println!("Linking");
-        execute_cmd(&mut cmd)?;
+        let output = execute_cmd(&mut cmd)?;
+        let mut err = stderr.lock().unwrap();
+        err.write_all(&output)?;
     }
 
     Ok(())
@@ -80,13 +86,7 @@ pub fn run(bin: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn create_compile(
-    ctx: &Config,
-    src: &PathBuf,
-    obj: &PathBuf,
-    dep: &PathBuf,
-    release: bool,
-) -> Result<(Command)> {
+fn create_compile(ctx: &Config, src: &PathBuf, obj: &PathBuf, dep: &PathBuf) -> Result<(Command)> {
     let mut cmd = Command::new(&ctx.compiler.path);
     cmd.arg("-c");
     cmd.arg(src);
@@ -110,7 +110,7 @@ fn create_compile(
     cmd.arg("-MF");
     cmd.arg(dep);
 
-    if release {
+    if ctx.release {
         cmd.arg("-O2");
     } else {
         cmd.arg("-O0");
@@ -132,7 +132,8 @@ fn create_link(ctx: &Config, objs: &Vec<&PathBuf>) -> Command {
 fn execute_cmd(cmd: &mut Command) -> Result<Vec<u8>> {
     let output = cmd.output().context("Failed to launch compiler.")?;
     if !output.status.success() {
-        bail!("Compilation failed");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        bail!("Compilation failed:\n{stderr}");
     }
 
     Ok(output.stderr)

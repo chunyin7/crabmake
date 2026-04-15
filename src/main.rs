@@ -48,17 +48,21 @@ fn handle<T>(result: Result<T>) -> T {
 }
 
 fn main() {
-    let ctx = handle(Config::new());
     let commands = Commands::parse();
 
     match commands {
         Commands::Init { name } => { /* todo */ }
         Commands::Build { release } => {
-            handle(compile(&ctx, release));
+            let ctx = handle(Config::new(release));
+            handle(compile(&ctx));
         }
-        Commands::Clean {} => handle(clean(&ctx)),
+        Commands::Clean {} => {
+            let ctx = handle(Config::new(false));
+            handle(clean(&ctx))
+        }
         Commands::Run { release } => {
-            handle(compile(&ctx, release));
+            let ctx = handle(Config::new(release));
+            handle(compile(&ctx));
             handle(run(&ctx.bin))
         }
     }

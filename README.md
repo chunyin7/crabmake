@@ -7,7 +7,8 @@ A minimal C/C++ Cargo inspired build tool written in Rust
 
 ## Features
 
-- Minimal CLI interface: `build`, `run`, `clean`
+- Minimal CLI interface: `init`, `build`, `run`, `clean`
+- Project scaffolding with a hello-world starter
 - TOML-based project configuration
 - Incremental builds using dependency files
 - Parallel compilation
@@ -16,6 +17,7 @@ A minimal C/C++ Cargo inspired build tool written in Rust
 ## Usage
 
 ```
+crabmake init <name> <lang> [std]   # scaffold a new project
 crabmake build              # debug build (no optimisation, includes debug symbols)
 crabmake build --release    # release build (-O2)
 crabmake run                # build and run (debug)
@@ -23,9 +25,27 @@ crabmake run --release      # build and run (release)
 crabmake clean              # remove build artifacts
 ```
 
+## Creating a project
+
+```
+crabmake init myapp c           # C project, defaults to -std=c17
+crabmake init myapp c++         # C++ project, defaults to -std=c++17
+crabmake init myapp c c11       # override the language standard
+crabmake init . c               # scaffold into the current directory
+```
+
+`lang` must be `c` or `c++`. `std` is optional; when omitted it defaults to `c17` or `c++17` based on the language.
+
+This generates:
+
+- `build.toml` with a default manifest (`srcs = ["src/main.c"]` or `src/main.cpp`)
+- `src/main.c` or `src/main.cpp` containing a hello-world stub
+
+You can then `cd` into the project and run `crabmake run`.
+
 ## Manifest
 
-Create a `build.toml` in your project root:
+`crabmake init` generates this file for you, but you can also write one by hand. Create a `build.toml` in your project root:
 
 ```toml
 [project]

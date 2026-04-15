@@ -1,5 +1,5 @@
 use crate::{
-    commands::{clean, compile, run},
+    commands::{clean, compile, init, run},
     config::Config,
 };
 use anyhow::Result;
@@ -17,6 +17,10 @@ enum Commands {
     Init {
         /// name of the crabmake project
         name: String,
+        /// language of the project
+        lang: String,
+        /// language standard to use
+        std: Option<String>,
     },
 
     /// compile and link
@@ -51,7 +55,7 @@ fn main() {
     let commands = Commands::parse();
 
     match commands {
-        Commands::Init { name } => { /* todo */ }
+        Commands::Init { name, lang, std } => handle(init(&name, &lang, &std)),
         Commands::Build { release } => {
             let ctx = handle(Config::new(release));
             handle(compile(&ctx));

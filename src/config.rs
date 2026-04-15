@@ -12,7 +12,7 @@ impl Compiler {
     pub fn from_lang(lang: &str) -> Result<Self> {
         let name = match lang {
             "c" => "cc",
-            "c++" => "c++",
+            "c++" | "cpp" => "c++",
             _ => {
                 bail!("Invalid language: {lang}")
             }

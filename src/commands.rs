@@ -5,7 +5,46 @@ use std::{fs, io::Write, os::unix::ffi::OsStrExt, path::PathBuf, process::Comman
 use crate::{
     config::Config,
     file::{convert_srcs, is_stale, parse_dep_file},
+    manifest::Manifest,
 };
+
+pub fn init(name: &String, lang: &String, std: &Option<String>) -> Result<()> {
+    let cur_dir = std::env::current_dir().context("Failed to read working directory.")?;
+    let proj_root = if name == "." {
+        cur_dir
+    } else {
+        let proj_root = cur_dir.join(name);
+        fs::create_dir(&proj_root).context("Failed to create project directory.")?;
+        proj_root
+    };
+
+    let (main_filename, main_content) = match lang.as_str() {
+        "c" => (
+            "main.c",
+            "#include <stdio.h>\n\nint main(void) {\n    printf(\"Hello, world!\\n\");\n    return 0;\n}\n",
+        ),
+        "cpp" | "c++" => (
+            "main.cpp",
+            "#include <iostream>\n\nint main() {\n    std::cout << \"Hello, world!\\n\";\n    return 0;\n}\n",
+        ),
+        other => bail!("Unsupported language: {}. Expected 'c' or 'cpp'.", other),
+    };
+
+    let mut manifest = Manifest::default(&name, &lang, &std)?;
+    manifest.build.srcs.push(format!("src/{}", main_filename));
+
+    let manifest_path = proj_root.join("build.toml");
+    let manifest_content =
+        toml::to_string(&manifest).context("Failed to serialize manifest")?;
+    std::fs::write(manifest_path, manifest_content).context("Failed to write build.toml")?;
+
+    let src_dir = proj_root.join("src");
+    fs::create_dir_all(&src_dir).context("Failed to create src directory.")?;
+    let main_path = src_dir.join(main_filename);
+    fs::write(&main_path, main_content).context("Failed to write main source file.")?;
+
+    Ok(())
+}
 
 pub fn clean(ctx: &Config) -> Result<()> {
     match fs::remove_dir_all(ctx.build_dir.as_path()) {

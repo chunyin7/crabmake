@@ -34,8 +34,7 @@ pub fn init(name: &String, lang: &String, std: &Option<String>) -> Result<()> {
     manifest.build.srcs.push(format!("src/{}", main_filename));
 
     let manifest_path = proj_root.join("build.toml");
-    let manifest_content =
-        toml::to_string(&manifest).context("Failed to serialize manifest")?;
+    let manifest_content = toml::to_string(&manifest).context("Failed to serialize manifest")?;
     std::fs::write(manifest_path, manifest_content).context("Failed to write build.toml")?;
 
     let src_dir = proj_root.join("src");
@@ -52,6 +51,32 @@ pub fn clean(ctx: &Config) -> Result<()> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(e) => Err(e).context("Failed to remove build directory."),
     }
+}
+
+pub fn compdb(ctx: &Config) -> Result<()> {
+    let srcs = convert_srcs(ctx)?;
+    let entries = srcs
+        .into_iter()
+        .map(|src| -> Result<_> {
+            let obj = ctx.map_src_to_obj(&src)?;
+            let dep = ctx.map_src_to_dep(&src)?;
+            let cmd = create_compile(ctx, &src, &obj, &dep)?;
+            let args = std::iter::once(cmd.get_program())
+                .chain(cmd.get_args())
+                .map(|s| s.to_string_lossy().to_owned())
+                .collect::<Vec<_>>();
+            let entry = serde_json::json!({
+                "file": src,
+                "directory": ctx.proj_root,
+                "arguments": args,
+                "output": obj,
+            });
+            Ok(entry)
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let compile_commands = ctx.proj_root.join("compile_commands.json");
+    fs::write(&compile_commands, serde_json::to_string_pretty(&entries)?)?;
+    Ok(())
 }
 
 pub fn compile(ctx: &Config) -> Result<()> {

@@ -1,5 +1,5 @@
 use crate::{
-    commands::{clean, compile, init, run},
+    commands::{clean, compdb, compile, init, run},
     config::Config,
 };
 use anyhow::Result;
@@ -39,6 +39,10 @@ enum Commands {
         #[arg(long)]
         release: bool,
     },
+
+    /// generate compile_commands.json
+    #[command()]
+    Compdb {},
 }
 
 fn handle<T>(result: Result<T>) -> T {
@@ -68,6 +72,10 @@ fn main() {
             let ctx = handle(Config::new(release));
             handle(compile(&ctx));
             handle(run(&ctx.bin))
+        }
+        Commands::Compdb {} => {
+            let ctx = handle(Config::new(false));
+            handle(compdb(&ctx));
         }
     }
 }

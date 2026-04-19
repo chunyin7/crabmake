@@ -7,7 +7,7 @@ A minimal C/C++ Cargo inspired build tool written in Rust
 
 ## Features
 
-- Minimal CLI interface: `init`, `build`, `run`, `clean`
+- Minimal CLI interface: `init`, `build`, `run`, `clean`, `compdb`
 - Project scaffolding with a hello-world starter
 - TOML-based project configuration
 - Incremental builds using dependency files
@@ -23,6 +23,7 @@ crabmake build --release    # release build (-O2)
 crabmake run                # build and run (debug)
 crabmake run --release      # build and run (release)
 crabmake clean              # remove build artifacts
+crabmake compdb             # generate compile_commands.json
 ```
 
 ## Creating a project
@@ -58,6 +59,14 @@ version = "0.1.0"
 srcs = ["src/**/*.c"]
 include_dirs = ["src"]
 flags = ["-Wall", "-Wextra"]
+```
+
+## Compile Commands
+
+`crabmake compdb` generates a `compile_commands.json` in the project root. This is a [compilation database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) used by tools like clangd and clang-tidy for code intelligence (autocomplete, diagnostics, go-to-definition, etc.).
+
+```
+crabmake compdb
 ```
 
 ## Building from source
